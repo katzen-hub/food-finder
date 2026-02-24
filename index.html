@@ -1,0 +1,858 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Food Establishment Finder — EU & USA</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Nunito+Sans:wght@400;600;700&display=swap');
+
+:root {
+  --green: #2ecc71; --green-dark: #27ae60; --green-light: #eafaf1; --green-mid: #d5f5e3;
+  --blue: #3498db; --blue-dark: #2980b9; --blue-light: #ebf5fb; --blue-mid: #d6eaf8;
+  --orange: #e67e22; --orange-light: #fef5ec;
+  --red: #e74c3c; --red-light: #fdf0ef;
+  --gray-100: #f8f9fa; --gray-200: #e9ecef; --gray-300: #dee2e6;
+  --gray-500: #adb5bd; --gray-700: #495057; --gray-900: #212529;
+  --white: #ffffff;
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.08); --shadow: 0 4px 12px rgba(0,0,0,0.08);
+  --radius: 16px; --radius-sm: 10px;
+  /* Active mode colors — overridden by JS */
+  --mode: var(--green-dark); --mode-light: var(--green-light); --mode-mid: var(--green-mid);
+}
+body.us-mode {
+  --mode: var(--blue-dark); --mode-light: var(--blue-light); --mode-mid: var(--blue-mid);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Nunito Sans', sans-serif; background: var(--gray-100); color: var(--gray-900); min-height: 100vh; padding-bottom: 4rem; }
+
+/* ── Topbar ── */
+.topbar { background: var(--white); border-bottom: 1px solid var(--gray-200); padding: 0 1.5rem; display: flex; align-items: center; gap: 0.75rem; height: 60px; position: sticky; top: 0; z-index: 10; box-shadow: var(--shadow-sm); }
+.topbar-logo { width: 34px; height: 34px; background: var(--mode); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; transition: background 0.3s; }
+.topbar-name { font-family: 'Nunito', sans-serif; font-weight: 900; font-size: 1.05rem; }
+.topbar-name span { color: var(--mode); transition: color 0.3s; }
+.topbar-badge { margin-left: auto; font-size: 0.65rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; background: var(--mode-light); color: var(--mode); padding: 0.25rem 0.65rem; border-radius: 20px; border: 1px solid var(--mode-mid); transition: all 0.3s; }
+
+/* ── Country switcher ── */
+.switcher-wrap { display: flex; gap: 0; border-radius: var(--radius-sm); overflow: hidden; border: 1.5px solid var(--gray-300); background: var(--gray-200); padding: 3px; gap: 3px; }
+.switch-btn { flex: 1; padding: 0.55rem 0.75rem; background: transparent; border: none; font-family: 'Nunito', sans-serif; font-weight: 800; font-size: 0.82rem; cursor: pointer; border-radius: 7px; transition: all 0.2s; color: var(--gray-500); display: flex; align-items: center; justify-content: center; gap: 0.4rem; }
+.switch-btn.active { background: var(--white); color: var(--gray-900); box-shadow: var(--shadow-sm); }
+.switch-btn.active.eu { color: var(--green-dark); }
+.switch-btn.active.us { color: var(--blue-dark); }
+
+/* ── Hero ── */
+.hero { color: white; padding: 2.5rem 1.5rem 3.5rem; text-align: center; position: relative; overflow: hidden; transition: background 0.4s; }
+.hero.eu { background: linear-gradient(135deg, var(--green-dark) 0%, #1e8449 100%); }
+.hero.us { background: linear-gradient(135deg, var(--blue-dark) 0%, #1a5276 100%); }
+.hero::before { content: ''; position: absolute; inset: 0; background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23ffffff' fill-opacity='0.04'%3E%3Ccircle cx='30' cy='30' r='20'/%3E%3C/g%3E%3C/svg%3E"); }
+.hero-content { position: relative; z-index: 1; }
+.hero-icon { font-size: 2.5rem; margin-bottom: 0.75rem; display: block; }
+.hero h1 { font-family: 'Nunito', sans-serif; font-weight: 900; font-size: clamp(1.5rem, 5vw, 2.2rem); margin-bottom: 0.5rem; line-height: 1.15; }
+.hero p { font-size: 0.9rem; opacity: 0.88; line-height: 1.6; max-width: 400px; margin: 0 auto; }
+
+/* ── Layout ── */
+.container { max-width: 600px; margin: -1.5rem auto 0; padding: 0 1rem; position: relative; z-index: 2; }
+.card { background: var(--white); border-radius: var(--radius); box-shadow: var(--shadow); padding: 1.5rem; margin-bottom: 1rem; }
+.card-title { font-family: 'Nunito', sans-serif; font-weight: 800; font-size: 1rem; display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem; }
+.step-num { width: 24px; height: 24px; background: var(--mode-light); color: var(--mode); border-radius: 50%; font-size: 0.75rem; font-weight: 800; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: all 0.3s; }
+
+/* ── Drop zone ── */
+#drop-zone { border: 2.5px dashed var(--gray-300); border-radius: var(--radius-sm); padding: 2.5rem 1rem; text-align: center; cursor: pointer; transition: all 0.2s; position: relative; background: var(--gray-100); }
+#drop-zone:hover, #drop-zone.dragover { border-color: var(--mode); background: var(--mode-light); }
+#drop-zone input[type=file] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+.upload-icon { font-size: 2.2rem; margin-bottom: 0.75rem; display: block; }
+.upload-text strong { display: block; font-family: 'Nunito', sans-serif; font-weight: 800; font-size: 0.95rem; color: var(--gray-900); margin-bottom: 0.3rem; }
+.upload-text p { font-size: 0.78rem; color: var(--gray-500); line-height: 1.5; }
+.upload-hint { margin-top: 1rem; display: flex; gap: 0.5rem; flex-wrap: wrap; justify-content: center; }
+.hint-chip { font-size: 0.7rem; background: var(--white); border: 1px solid var(--gray-200); border-radius: 20px; padding: 0.25rem 0.7rem; color: var(--gray-700); }
+
+#preview-wrap { display: none; position: relative; border-radius: var(--radius-sm); overflow: hidden; }
+#preview-img { width: 100%; max-height: 280px; object-fit: contain; display: block; background: var(--gray-100); }
+.change-btn { position: absolute; top: 0.6rem; right: 0.6rem; background: rgba(255,255,255,0.92); border: 1px solid var(--gray-300); color: var(--gray-700); font-size: 0.75rem; font-weight: 600; padding: 0.35rem 0.8rem; cursor: pointer; border-radius: 20px; box-shadow: var(--shadow-sm); transition: all 0.15s; font-family: 'Nunito Sans', sans-serif; }
+.change-btn:hover { border-color: var(--mode); color: var(--mode); }
+
+#analyze-btn { width: 100%; padding: 0.95rem; background: var(--mode); color: white; border: none; font-family: 'Nunito', sans-serif; font-size: 1rem; font-weight: 800; cursor: pointer; border-radius: var(--radius-sm); transition: background 0.2s, transform 0.1s; display: none; margin-top: 0.75rem; box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+#analyze-btn:hover { filter: brightness(0.9); }
+#analyze-btn:disabled { background: var(--gray-300); color: var(--gray-500); cursor: not-allowed; box-shadow: none; }
+
+/* ── Progress ── */
+#status-box { display: none; }
+.progress-list { list-style: none; }
+.step { display: flex; align-items: center; gap: 0.75rem; padding: 0.65rem 0; border-bottom: 1px solid var(--gray-200); font-size: 0.82rem; color: var(--gray-500); transition: color 0.3s; }
+.step:last-child { border-bottom: none; }
+.step.active { color: var(--gray-900); font-weight: 600; }
+.step.done { color: var(--green-dark); font-weight: 600; }
+.step.error-step { color: var(--red); }
+.step-icon { width: 28px; height: 28px; border-radius: 50%; background: var(--gray-200); display: flex; align-items: center; justify-content: center; font-size: 0.75rem; flex-shrink: 0; transition: all 0.3s; }
+.step.active .step-icon { background: #fef9e7; animation: pulse 1.2s infinite; }
+.step.done .step-icon { background: var(--green-light); }
+.step.error-step .step-icon { background: var(--red-light); }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
+
+/* ── Results ── */
+#results { display: none; }
+.not-found-box { background: var(--orange-light); border: 1.5px solid #f5cba7; border-radius: var(--radius-sm); padding: 1.25rem; display: flex; gap: 0.9rem; align-items: flex-start; }
+.not-found-icon { font-size: 1.6rem; flex-shrink: 0; }
+.not-found-title { font-family: 'Nunito', sans-serif; font-weight: 800; font-size: 0.95rem; color: var(--orange); margin-bottom: 0.35rem; }
+.not-found-desc { font-size: 0.8rem; color: var(--gray-700); line-height: 1.6; }
+.tip-list { margin-top: 0.75rem; padding-left: 0; list-style: none; }
+.tip-list li { font-size: 0.78rem; color: var(--gray-700); padding: 0.2rem 0; display: flex; gap: 0.5rem; }
+.tip-list li::before { content: '→'; color: var(--orange); flex-shrink: 0; font-weight: 700; }
+
+.code-hero { text-align: center; padding: 1rem 0 0.5rem; }
+.code-pill { display: inline-block; font-family: 'Nunito', sans-serif; font-weight: 900; font-size: 1.7rem; letter-spacing: 0.12em; color: var(--mode); background: var(--mode-light); border: 2px solid var(--mode-mid); border-radius: 12px; padding: 0.5rem 1.5rem; margin-bottom: 0.5rem; transition: all 0.3s; }
+.code-sublabel { font-size: 0.72rem; color: var(--gray-500); letter-spacing: 0.05em; text-transform: uppercase; font-weight: 700; }
+
+.divider { height: 1px; background: var(--gray-200); margin: 1rem 0; }
+.info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; margin: 1rem 0; }
+.info-tile { background: var(--gray-100); border-radius: var(--radius-sm); padding: 0.75rem 0.85rem; }
+.info-tile.full { grid-column: 1/-1; }
+.tile-key { font-size: 0.62rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--gray-500); margin-bottom: 0.25rem; }
+.tile-val { font-size: 0.85rem; font-weight: 700; color: var(--gray-900); line-height: 1.4; }
+
+.estab-name-box { background: linear-gradient(135deg, var(--mode-light) 0%, var(--mode-mid) 100%); border: 2px solid var(--mode); border-radius: var(--radius-sm); padding: 1rem 1.1rem; margin: 0.75rem 0 0; transition: all 0.3s; }
+.estab-name-label { font-size: 0.62rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--mode); margin-bottom: 0.4rem; transition: color 0.3s; }
+.estab-name { font-family: 'Nunito', sans-serif; font-size: 1.2rem; font-weight: 900; color: var(--gray-900); line-height: 1.3; margin-bottom: 0.2rem; }
+.estab-address { font-size: 0.78rem; color: var(--gray-700); margin-bottom: 0.35rem; line-height: 1.5; }
+.estab-source { font-size: 0.65rem; color: var(--mode); font-weight: 700; letter-spacing: 0.04em; transition: color 0.3s; }
+
+.analysis-text { font-size: 0.82rem; color: var(--gray-700); line-height: 1.75; white-space: pre-wrap; }
+.info-note { background: var(--orange-light); border: 1px solid #f5cba7; border-radius: var(--radius-sm); padding: 0.75rem 1rem; font-size: 0.8rem; color: var(--gray-700); margin-top: 0.75rem; display: flex; gap: 0.5rem; line-height: 1.5; }
+
+.ext-btn { display: flex; align-items: center; justify-content: center; gap: 0.5rem; width: 100%; padding: 0.75rem; background: var(--white); border: 1.5px solid var(--mode); color: var(--mode); font-family: 'Nunito', sans-serif; font-size: 0.85rem; font-weight: 800; border-radius: var(--radius-sm); cursor: pointer; text-decoration: none; transition: all 0.2s; margin-top: 0.5rem; }
+.ext-btn:hover { background: var(--mode-light); }
+.reset-btn { width: 100%; padding: 0.8rem; background: transparent; border: 1.5px solid var(--gray-300); color: var(--gray-700); font-family: 'Nunito', sans-serif; font-size: 0.9rem; font-weight: 700; cursor: pointer; border-radius: var(--radius-sm); transition: all 0.2s; margin-top: 0.5rem; }
+.reset-btn:hover { border-color: var(--mode); color: var(--mode); background: var(--mode-light); }
+
+/* ── Manual input ── */
+.or-divider { display: flex; align-items: center; gap: 0.75rem; margin: 0.5rem 0; font-size: 0.72rem; color: var(--gray-500); font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; }
+.or-divider::before, .or-divider::after { content: ''; flex: 1; height: 1px; background: var(--gray-200); }
+
+.code-input-row { display: flex; gap: 0.5rem; align-items: flex-start; }
+.code-segment { display: flex; flex-direction: column; gap: 0.3rem; flex: 1; }
+.code-segment label { font-size: 0.62rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--gray-500); }
+.code-segment input { width: 100%; padding: 0.7rem 0.75rem; border: 1.5px solid var(--gray-300); border-radius: var(--radius-sm); font-family: 'Nunito', sans-serif; font-size: 1rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em; color: var(--gray-900); background: var(--white); transition: border-color 0.2s, box-shadow 0.2s; text-align: center; }
+.code-segment input:focus { outline: none; border-color: var(--mode); box-shadow: 0 0 0 3px rgba(0,0,0,0.06); }
+.code-segment input.valid { border-color: var(--mode); background: var(--mode-light); }
+.code-segment input.invalid { border-color: var(--red); background: var(--red-light); }
+.code-sep { font-size: 1.4rem; font-weight: 900; color: var(--gray-300); padding-top: 1.85rem; flex-shrink: 0; user-select: none; }
+
+.validation-msg { margin-top: 0.6rem; font-size: 0.75rem; min-height: 1.2em; display: flex; align-items: center; gap: 0.35rem; }
+.validation-msg.ok { color: var(--green-dark); }
+.validation-msg.err { color: var(--red); }
+.validation-msg.hint { color: var(--gray-500); }
+
+.code-preview { margin-top: 0.85rem; padding: 0.65rem 1rem; background: var(--gray-100); border-radius: var(--radius-sm); font-family: 'Nunito', sans-serif; font-size: 1.1rem; font-weight: 900; letter-spacing: 0.12em; color: var(--gray-500); text-align: center; transition: all 0.2s; border: 1.5px solid transparent; }
+.code-preview.ready { background: var(--mode-light); color: var(--mode); border-color: var(--mode-mid); }
+
+.lookup-btn { width: 100%; padding: 0.9rem; background: var(--mode); color: white; border: none; font-family: 'Nunito', sans-serif; font-size: 1rem; font-weight: 800; cursor: pointer; border-radius: var(--radius-sm); transition: all 0.2s; margin-top: 0.75rem; box-shadow: 0 4px 12px rgba(0,0,0,0.12); }
+.lookup-btn:hover { filter: brightness(0.9); }
+.lookup-btn:disabled { background: var(--gray-300); color: var(--gray-500); cursor: not-allowed; box-shadow: none; }
+
+.hint-text { font-size: 0.72rem; color: var(--gray-500); margin-top: 0.5rem; line-height: 1.5; }
+.hint-text strong { color: var(--gray-700); }
+
+/* ── Recall badge ── */
+.recall-badge { display: inline-flex; align-items: center; gap: 0.4rem; background: var(--red-light); color: var(--red); border: 1.5px solid #f5b7b1; border-radius: 8px; padding: 0.5rem 0.85rem; font-family: 'Nunito', sans-serif; font-weight: 800; font-size: 0.8rem; margin-top: 0.5rem; }
+
+footer { text-align: center; margin-top: 2rem; padding: 0 1.5rem; font-size: 0.7rem; color: var(--gray-500); line-height: 1.8; }
+footer a { color: var(--mode); text-decoration: none; transition: color 0.3s; }
+
+/* ── Panel visibility ── */
+.eu-only, .us-only { transition: none; }
+body:not(.us-mode) .us-only { display: none !important; }
+body.us-mode .eu-only { display: none !important; }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-logo">🥫</div>
+  <div class="topbar-name">Food<span>Facts</span> Tracer</div>
+  <div class="topbar-badge" id="topbar-badge">EU Traceability</div>
+</div>
+
+<div class="hero eu" id="hero">
+  <div class="hero-content">
+    <span class="hero-icon" id="hero-icon">🔍</span>
+    <h1 id="hero-title">Find the establishment<br>behind your EU food</h1>
+    <p id="hero-sub">Upload a photo or enter the oval health mark code to trace any EU approved food facility.</p>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- Country switcher -->
+  <div class="card" style="padding: 0.75rem 1rem;">
+    <div class="switcher-wrap">
+      <button class="switch-btn eu active" id="btn-eu" onclick="setMode('eu')">🇪🇺 European Union</button>
+      <button class="switch-btn us" id="btn-us" onclick="setMode('us')">🇺🇸 United States</button>
+    </div>
+  </div>
+
+  <!-- Upload card -->
+  <div class="card" id="upload-card">
+    <div class="card-title">
+      <span class="step-num">1</span>
+      Upload product photo
+    </div>
+    <div id="drop-zone">
+      <input type="file" accept="image/*" id="file-input">
+      <span class="upload-icon">📷</span>
+      <div class="upload-text">
+        <strong>Tap to take a photo or browse</strong>
+        <p class="eu-only">Look for the oval health mark: <strong>HU 260 EK</strong></p>
+        <p class="us-only">Look for the round USDA stamp: <strong>EST. 1234</strong></p>
+      </div>
+      <div class="upload-hint eu-only">
+        <span class="hint-chip">🥛 Dairy</span><span class="hint-chip">🥩 Meat</span>
+        <span class="hint-chip">🐟 Fish</span><span class="hint-chip">🧀 Cheese</span><span class="hint-chip">🥚 Eggs</span>
+      </div>
+      <div class="upload-hint us-only">
+        <span class="hint-chip">🥩 Beef</span><span class="hint-chip">🐖 Pork</span>
+        <span class="hint-chip">🐔 Poultry</span><span class="hint-chip">🥚 Eggs</span><span class="hint-chip">🐟 Seafood</span>
+      </div>
+    </div>
+    <div id="preview-wrap">
+      <img id="preview-img" alt="Product preview">
+      <button class="change-btn" id="change-btn">✕ Change</button>
+    </div>
+    <button id="analyze-btn">🔍 Identify Establishment</button>
+  </div>
+
+  <div class="or-divider">or enter code manually</div>
+
+  <!-- EU manual input -->
+  <div class="card eu-only" id="eu-manual-card">
+    <div class="card-title">
+      <span class="step-num" style="background:var(--blue-light);color:var(--blue)">⌨</span>
+      Enter EU health mark code
+    </div>
+    <div class="code-input-row">
+      <div class="code-segment">
+        <label>Country</label>
+        <input type="text" id="eu-cc" maxlength="2" placeholder="HU" autocomplete="off" spellcheck="false">
+      </div>
+      <div class="code-sep">·</div>
+      <div class="code-segment" style="flex:1.2">
+        <label>Number</label>
+        <input type="text" id="eu-num" maxlength="4" placeholder="260" autocomplete="off" inputmode="numeric">
+      </div>
+      <div class="code-sep">·</div>
+      <div class="code-segment">
+        <label>Suffix</label>
+        <input type="text" id="eu-sfx" maxlength="3" placeholder="EK" autocomplete="off" spellcheck="false">
+      </div>
+    </div>
+    <div class="validation-msg hint" id="eu-val-msg"><span>Enter the three parts of the EU health mark oval</span></div>
+    <div class="code-preview" id="eu-preview">? · ? · ?</div>
+    <div class="hint-text" id="eu-country-hint"></div>
+    <button class="lookup-btn" id="eu-lookup-btn" disabled>🔍 Look Up Establishment</button>
+  </div>
+
+  <!-- US manual input -->
+  <div class="card us-only" id="us-manual-card">
+    <div class="card-title">
+      <span class="step-num" style="background:var(--blue-light);color:var(--blue)">⌨</span>
+      Enter USDA / FDA establishment number
+    </div>
+    <div class="code-input-row">
+      <div class="code-segment" style="flex:0.7">
+        <label>Type</label>
+        <select id="us-type" style="width:100%;padding:0.7rem 0.5rem;border:1.5px solid var(--gray-300);border-radius:var(--radius-sm);font-family:'Nunito',sans-serif;font-size:0.9rem;font-weight:700;background:var(--white);cursor:pointer;">
+          <option value="M">M – Meat</option>
+          <option value="P">P – Poultry</option>
+          <option value="V">V – Voluntary</option>
+          <option value="E">E – Egg</option>
+          <option value="SIS">SIS</option>
+          <option value="FDA">FDA Facility</option>
+        </select>
+      </div>
+      <div class="code-sep" style="padding-top:1.85rem">·</div>
+      <div class="code-segment" style="flex:2">
+        <label>Establishment number</label>
+        <input type="text" id="us-num" maxlength="8" placeholder="1234" autocomplete="off" inputmode="numeric" spellcheck="false">
+      </div>
+    </div>
+    <div class="validation-msg hint" id="us-val-msg"><span>Enter the number from the USDA round stamp (e.g. EST. 1234)</span></div>
+    <div class="code-preview" id="us-preview">EST. ?</div>
+    <div class="hint-text">
+      <strong>Where to find it:</strong> Look for the round USDA inspection legend on meat/poultry packaging — it says <strong>"EST."</strong> followed by a number. On seafood/FDA products look for a registration number on the label.
+    </div>
+    <button class="lookup-btn" id="us-lookup-btn" disabled>🔍 Look Up Establishment</button>
+  </div>
+
+  <!-- Progress -->
+  <div class="card" id="status-box">
+    <div class="card-title"><span class="step-num">2</span> Analyzing…</div>
+    <ul class="progress-list">
+      <li class="step" id="step-read"><div class="step-icon">👁</div><span>Reading label from image</span></li>
+      <li class="step" id="step-parse"><div class="step-icon">🗺</div><span>Parsing establishment number</span></li>
+      <li class="step" id="step-lookup"><div class="step-icon">🏭</div><span>Looking up establishment details</span></li>
+      <li class="step" id="step-done"><div class="step-icon">✅</div><span>Building result</span></li>
+    </ul>
+  </div>
+
+  <!-- Results -->
+  <div id="results">
+
+    <!-- Not found -->
+    <div class="card" id="result-not-found" style="display:none">
+      <div class="card-title"><span class="step-num" style="background:#fef5ec;color:var(--orange)">!</span> Code not detected</div>
+      <div class="not-found-box">
+        <div class="not-found-icon">🔎</div>
+        <div>
+          <div class="not-found-title">No establishment code found in this photo</div>
+          <div class="not-found-desc eu-only">The EU health mark (oval, format <strong>HU 260 EK</strong>) was not detected. Try entering it manually above.</div>
+          <div class="not-found-desc us-only">The USDA inspection legend (<strong>EST. XXXX</strong>) was not detected. Try entering it manually above.</div>
+          <ul class="tip-list">
+            <li>Try photographing the <strong>lid, base, or side</strong> of the packaging</li>
+            <li>Make sure the image is <strong>sharp and well-lit</strong></li>
+            <li>The mark may be <strong>embossed</strong> — try an angled shot</li>
+          </ul>
+        </div>
+      </div>
+      <button class="reset-btn" id="reset-btn-nf">↩ Try another photo</button>
+    </div>
+
+    <!-- Found -->
+    <div id="result-found" style="display:none">
+      <div class="card">
+        <div class="card-title"><span class="step-num">✓</span> Establishment identified</div>
+        <div class="code-hero">
+          <div class="code-pill" id="code-display"></div>
+          <div class="code-sublabel" id="code-sublabel"></div>
+        </div>
+        <div id="estab-name-wrap" style="display:none">
+          <div class="estab-name-box">
+            <div class="estab-name-label">🏭 Registered establishment name</div>
+            <div class="estab-name" id="estab-name"></div>
+            <div class="estab-address" id="estab-address"></div>
+            <div class="estab-source" id="estab-source"></div>
+          </div>
+        </div>
+        <div class="divider"></div>
+        <div class="info-grid" id="info-grid"></div>
+        <div id="recall-wrap"></div>
+      </div>
+      <div class="card">
+        <div class="card-title"><span class="step-num">📋</span> Details &amp; verification</div>
+        <p class="analysis-text" id="analysis-text"></p>
+        <div id="info-note-wrap"></div>
+        <a class="ext-btn" id="ext-link" href="#" target="_blank" rel="noopener">🔗 <span id="ext-link-label">Search official database</span></a>
+      </div>
+      <button class="reset-btn" id="reset-btn">↩ Look up another</button>
+    </div>
+
+  </div><!-- /results -->
+
+</div><!-- /container -->
+
+<footer>
+  <p>US data: <a href="https://www.fsis.usda.gov/inspection/establishments" target="_blank">USDA FSIS MPI Directory</a> · <a href="https://open.fda.gov" target="_blank">openFDA</a></p>
+  <p>EU data: <a href="https://world.openfoodfacts.org" target="_blank">Open Food Facts</a> · <a href="https://webgate.ec.europa.eu/tracesnt/directory/listing/establishment/publication/index" target="_blank">TRACES NT</a></p>
+  <p>OCR by <a href="https://tesseract.projectnaptha.com" target="_blank">Tesseract.js</a> — no data sent to external servers</p>
+</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/5.0.4/tesseract.min.js"></script>
+<script>
+// ══════════════════════════════════════════════════════════
+//  MODE SWITCHING
+// ══════════════════════════════════════════════════════════
+let currentMode = 'eu';
+
+function setMode(mode) {
+  currentMode = mode;
+  document.body.classList.toggle('us-mode', mode === 'us');
+  document.getElementById('btn-eu').classList.toggle('active', mode === 'eu');
+  document.getElementById('btn-us').classList.toggle('active', mode === 'us');
+  const hero = document.getElementById('hero');
+  hero.className = 'hero ' + mode;
+
+  if (mode === 'eu') {
+    document.getElementById('hero-icon').textContent = '🔍';
+    document.getElementById('hero-title').innerHTML = 'Find the establishment<br>behind your EU food';
+    document.getElementById('hero-sub').textContent = 'Upload a photo or enter the oval health mark code to trace any EU approved food facility.';
+    document.getElementById('topbar-badge').textContent = 'EU Traceability';
+  } else {
+    document.getElementById('hero-icon').textContent = '🇺🇸';
+    document.getElementById('hero-title').innerHTML = 'Trace any USDA or FDA<br>inspected establishment';
+    document.getElementById('hero-sub').textContent = 'Enter the EST. number from the USDA round stamp, or upload a photo of your meat, poultry or seafood label.';
+    document.getElementById('topbar-badge').textContent = 'US Traceability';
+  }
+
+  // Reset state
+  reset();
+}
+
+// ══════════════════════════════════════════════════════════
+//  EU DATA TABLES
+// ══════════════════════════════════════════════════════════
+const EU_COUNTRIES = {
+  AT:{name:'Austria',authority:'AGES / BMSGPK'}, BE:{name:'Belgium',authority:'AFSCA-FAVV'},
+  BG:{name:'Bulgaria',authority:'BFSA'}, CY:{name:'Cyprus',authority:'Veterinary Services'},
+  CZ:{name:'Czech Republic',authority:'SVS CZ'}, DE:{name:'Germany',authority:'BVL / State authorities'},
+  DK:{name:'Denmark',authority:'Danish Veterinary and Food Administration'}, EE:{name:'Estonia',authority:'Agriculture and Food Board'},
+  ES:{name:'Spain',authority:'AECOSAN / AESAN'}, FI:{name:'Finland',authority:'Ruokavirasto (Evira)'},
+  FR:{name:'France',authority:'DGAL / DGCCRF'}, GR:{name:'Greece',authority:'EFET'},
+  HR:{name:'Croatia',authority:'HAPIH'}, HU:{name:'Hungary',authority:'NÉBIH'},
+  IE:{name:'Ireland',authority:'Food Safety Authority of Ireland'}, IT:{name:'Italy',authority:'Ministero della Salute'},
+  LT:{name:'Lithuania',authority:'VMVT'}, LU:{name:'Luxembourg',authority:'OSEC / ALVA'},
+  LV:{name:'Latvia',authority:'PVD'}, MT:{name:'Malta',authority:'VSA'},
+  NL:{name:'Netherlands',authority:'NVWA'}, PL:{name:'Poland',authority:'IJHARS / WIJHARS'},
+  PT:{name:'Portugal',authority:'DGAV'}, RO:{name:'Romania',authority:'ANSVSA'},
+  SE:{name:'Sweden',authority:'Livsmedelsverket'}, SI:{name:'Slovenia',authority:'UVHVVR'},
+  SK:{name:'Slovakia',authority:'ŠVPS SR'}, IS:{name:'Iceland',authority:'MAST'},
+  NO:{name:'Norway',authority:'Mattilsynet'}, UK:{name:'United Kingdom',authority:'FSA / FSS'},
+  GB:{name:'Great Britain',authority:'FSA / FSS'},
+};
+
+const EU_SUFFIXES = {
+  EK:{meaning:'Dairy processing plant',type:'Dairy Processing Plant',products:['milk','butter','cream','cheese','yoghurt']},
+  EC:{meaning:'Dairy / milk processing establishment',type:'Dairy Processing Plant',products:['milk','dairy products']},
+  EV:{meaning:'Slaughterhouse / abattoir',type:'Slaughterhouse',products:['red meat','offal']},
+  ES:{meaning:'Meat cutting plant',type:'Meat Cutting Plant',products:['beef','pork','lamb']},
+  EB:{meaning:'Meat preparation / minced meat plant',type:'Meat Preparation Plant',products:['minced meat','sausages']},
+  EP:{meaning:'Poultry slaughterhouse',type:'Poultry Slaughterhouse',products:['chicken','turkey','poultry']},
+  EH:{meaning:'Fish / fishery products establishment',type:'Fish Processing Plant',products:['fish','seafood']},
+  ET:{meaning:'Egg packing / processing centre',type:'Egg Processing Centre',products:['eggs','egg products']},
+  EG:{meaning:'Approved food establishment (general)',type:'Food Processing Plant',products:['various food products']},
+  CE:{meaning:'Approved establishment (CE mark)',type:'Food Processing Plant',products:['various food products']},
+  EE:{meaning:'Approved food establishment',type:'Food Processing Plant',products:['various food products']},
+  EF:{meaning:'Cold store / refrigerated warehouse',type:'Cold Store',products:['stored food products']},
+};
+const VALID_EU_SUFFIXES = Object.keys(EU_SUFFIXES);
+
+// ══════════════════════════════════════════════════════════
+//  US DATA TABLES
+// ══════════════════════════════════════════════════════════
+const US_PREFIXES = {
+  M:  {label:'Meat',          authority:'USDA FSIS', description:'FSIS-inspected meat processing establishment', regulation:'Federal Meat Inspection Act'},
+  P:  {label:'Poultry',       authority:'USDA FSIS', description:'FSIS-inspected poultry processing establishment', regulation:'Poultry Products Inspection Act'},
+  V:  {label:'Voluntary',     authority:'USDA FSIS', description:'Voluntarily inspected establishment (exotic meats, rabbit, etc.)', regulation:'FSIS Voluntary Inspection'},
+  E:  {label:'Egg Products',  authority:'USDA FSIS', description:'Egg products inspection establishment', regulation:'Egg Products Inspection Act'},
+  SIS:{label:'Sheep',         authority:'USDA FSIS', description:'Sheep and goat inspection establishment', regulation:'Federal Meat Inspection Act'},
+  FDA:{label:'FDA Facility',  authority:'FDA / HHS', description:'FDA-registered food facility (seafood, produce, general food)', regulation:'21 CFR Part 1 Subpart H'},
+};
+
+// ══════════════════════════════════════════════════════════
+//  OCR
+// ══════════════════════════════════════════════════════════
+const EU_CODE_RE = /\b([A-Z]{2})\s*[-.]?\s*(\d{1,4})\s*[-.]?\s*([A-Z]{2,3})\b/g;
+// US: EST. 1234 or EST 1234 or M1234 or P1234
+const US_CODE_RE = /EST\.?\s*(\d{1,6})|([MPVESISsm]{1,3})[\s.-]?(\d{1,6})/gi;
+
+function extractEUCodes(text) {
+  const found = []; const upper = text.toUpperCase();
+  let m; EU_CODE_RE.lastIndex = 0;
+  while ((m = EU_CODE_RE.exec(upper)) !== null) {
+    const [,cc,num,sfx] = m;
+    if (EU_COUNTRIES[cc] && EU_SUFFIXES[sfx]) found.push({cc, num, sfx, code:`${cc} ${num} ${sfx}`});
+  }
+  return found;
+}
+
+function extractUSCodes(text) {
+  const found = []; const upper = text.toUpperCase();
+  let m;
+  // Look for EST. XXXX pattern first (most common on packaging)
+  const estRe = /EST\.?\s*(\d{1,6})/g;
+  while ((m = estRe.exec(upper)) !== null) {
+    found.push({prefix:'M', num:m[1], code:`EST. ${m[1]}`, displayCode:`EST. ${m[1]}`});
+  }
+  // Also look for prefixed codes like M1234, P5678
+  const prefixRe = /\b([MPVEe])\s*(\d{3,6})\b/g;
+  while ((m = prefixRe.exec(upper)) !== null) {
+    const p = m[1].toUpperCase();
+    if (US_PREFIXES[p]) found.push({prefix:p, num:m[2], code:`${p}${m[2]}`, displayCode:`EST. ${m[2]} (${p})`});
+  }
+  return found;
+}
+
+async function ocrImage(file) {
+  const url = URL.createObjectURL(file);
+  try {
+    const result = await Tesseract.recognize(url, 'eng', {
+      logger: msg => { if (msg.status === 'recognizing text') {
+        const span = document.querySelector('#step-read span');
+        if (span) span.textContent = `Reading label… ${Math.round(msg.progress*100)}%`;
+      }}
+    });
+    return result.data.text;
+  } finally { URL.revokeObjectURL(url); }
+}
+
+// ══════════════════════════════════════════════════════════
+//  EU LOOKUP
+// ══════════════════════════════════════════════════════════
+async function lookupEU(cc, num, sfx) {
+  const country = EU_COUNTRIES[cc] || {};
+  const sfxData = EU_SUFFIXES[sfx] || {};
+
+  const result = {
+    code: `${cc} ${num} ${sfx}`,
+    country_name: country.name || cc,
+    national_authority: country.authority || '—',
+    establishment_type: sfxData.type || 'Food Processing Plant',
+    suffix_meaning: sfxData.meaning || sfx,
+    likely_products: sfxData.products || [],
+    establishment_name: null, address: null, name_source: null,
+    ext_url: 'https://webgate.ec.europa.eu/tracesnt/directory/listing/establishment/publication/index',
+    ext_label: 'Search TRACES NT database',
+    regulation: 'Regulation (EC) 853/2004',
+    sublabel: 'EU Health Mark · Regulation (EC) 853/2004',
+  };
+
+  // Try Open Food Facts via proxy
+  try {
+    const r = await fetch(`/api/lookup?source=off&cc=${encodeURIComponent(cc)}&num=${encodeURIComponent(num)}&sfx=${encodeURIComponent(sfx)}`);
+    if (r.ok) {
+      const j = await r.json();
+      if (j.found && j.name) {
+        result.establishment_name = j.name;
+        result.address = j.city || null;
+        result.name_source = 'Open Food Facts';
+      }
+    }
+  } catch(_) {}
+
+  result.summary = result.establishment_name
+    ? `${result.establishment_name} is an approved EU ${result.establishment_type.toLowerCase()} in ${result.country_name}, registered under code ${result.code}.\n\nTypical products: ${result.likely_products.slice(0,3).join(', ')}.\n\nSupervised by: ${result.national_authority}.`
+    : `Establishment ${result.code} is an approved ${result.establishment_type.toLowerCase()} in ${result.country_name}.\n\nTypical products from this type of facility: ${result.likely_products.slice(0,3).join(', ')}.\n\nThe national authority is ${result.national_authority}. The registered name was not found in Open Food Facts — search TRACES NT for the full record.`;
+
+  return result;
+}
+
+// ══════════════════════════════════════════════════════════
+//  US LOOKUP
+// ══════════════════════════════════════════════════════════
+async function lookupUS(prefix, num) {
+  const prefixData = US_PREFIXES[prefix] || US_PREFIXES['M'];
+
+  const result = {
+    code: `${prefix}${num}`,
+    displayCode: `EST. ${num}`,
+    prefix_label: prefixData.label,
+    authority: prefixData.authority,
+    description: prefixData.description,
+    regulation: prefixData.regulation,
+    establishment_name: null, address: null, city: null, state: null,
+    activities: null, name_source: null,
+    sublabel: `USDA FSIS · ${prefixData.regulation}`,
+    ext_label: 'Search USDA FSIS MPI Directory',
+    ext_url: `https://www.fsis.usda.gov/inspection/fsis-inspected-establishments`,
+    recalls: null,
+  };
+
+  // Try FSIS MPI API via proxy
+  try {
+    const r = await fetch(`/api/lookup?source=fsis&prefix=${encodeURIComponent(prefix)}&est=${encodeURIComponent(num)}`);
+    if (r.ok) {
+      const j = await r.json();
+      if (j.found && j.data) {
+        const est = Array.isArray(j.data) ? j.data[0] : (j.data.value?.[0] || j.data);
+        if (est) {
+          result.establishment_name = est.establishment_name || est.EstablishmentName || null;
+          result.city = est.city || est.City || null;
+          result.state = est.state || est.State || null;
+          result.address = [est.address || est.Address, result.city, result.state].filter(Boolean).join(', ') || null;
+          result.activities = est.activities || est.Activities || null;
+          result.name_source = 'USDA FSIS MPI Directory';
+        }
+      }
+    }
+  } catch(_) {}
+
+  // If FSIS didn't work, try openFDA via proxy
+  if (!result.establishment_name && prefix === 'FDA') {
+    try {
+      const r = await fetch(`/api/lookup?source=fda&est=${encodeURIComponent(num)}`);
+      if (r.ok) {
+        const j = await r.json();
+        if (j.found && j.data?.results?.[0]) {
+          const fac = j.data.results[0];
+          result.establishment_name = fac.firm_name || fac.business_name || null;
+          result.city = fac.city || null;
+          result.state = fac.state_province || null;
+          result.address = [fac.address_line_1, result.city, result.state].filter(Boolean).join(', ') || null;
+          result.name_source = 'openFDA';
+        }
+      }
+    } catch(_) {}
+  }
+
+  // Check for recent FSIS recalls via proxy
+  try {
+    const r = await fetch(`/api/lookup?source=fsis_recall&prefix=${encodeURIComponent(prefix)}&est=${encodeURIComponent(num)}`);
+    if (r.ok) {
+      const j = await r.json();
+      if (j.found && j.data) {
+        const recalls = Array.isArray(j.data) ? j.data : j.data.value;
+        if (recalls?.length) {
+          result.recalls = recalls.map(rc => ({
+            date: rc.recall_date || rc.RecallDate || '',
+            reason: rc.recall_reason || rc.RecallReason || rc.product_name || 'See FSIS for details',
+            classification: rc.recall_class || rc.RecallClass || '',
+          }));
+        }
+      }
+    }
+  } catch(_) {}
+
+  result.summary = result.establishment_name
+    ? `${result.establishment_name} is a USDA-inspected ${prefixData.label.toLowerCase()} establishment located in ${result.state || 'the US'}, registered under ${result.code}.\n\nInspected under: ${prefixData.regulation}.\nSupervised by: ${prefixData.authority}.`
+    : `Establishment ${result.code} is a ${prefixData.description}.\n\nInspected under: ${prefixData.regulation}.\nSupervised by: ${prefixData.authority}.\n\nThe establishment name could not be retrieved from the FSIS API — search the USDA MPI Directory link below for the full record.`;
+
+  return result;
+}
+
+// ══════════════════════════════════════════════════════════
+//  UI HELPERS
+// ══════════════════════════════════════════════════════════
+const dropZone    = document.getElementById('drop-zone');
+const fileInput   = document.getElementById('file-input');
+const previewWrap = document.getElementById('preview-wrap');
+const previewImg  = document.getElementById('preview-img');
+const analyzeBtn  = document.getElementById('analyze-btn');
+const statusBox   = document.getElementById('status-box');
+const resultsDiv  = document.getElementById('results');
+const resultFound = document.getElementById('result-found');
+const resultNF    = document.getElementById('result-not-found');
+
+let currentFile = null;
+
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault(); dropZone.classList.remove('dragover');
+  const f = e.dataTransfer.files[0];
+  if (f?.type.startsWith('image/')) loadFile(f);
+});
+fileInput.addEventListener('change', () => { if (fileInput.files[0]) loadFile(fileInput.files[0]); });
+document.getElementById('change-btn').addEventListener('click', () => {
+  currentFile = null; fileInput.value = '';
+  previewWrap.style.display = 'none'; dropZone.style.display = ''; analyzeBtn.style.display = 'none';
+});
+
+function loadFile(f) {
+  currentFile = f;
+  const url = URL.createObjectURL(f);
+  previewImg.src = url; previewImg.onload = () => URL.revokeObjectURL(url);
+  dropZone.style.display = 'none'; previewWrap.style.display = 'block'; analyzeBtn.style.display = 'block';
+}
+
+analyzeBtn.addEventListener('click', analyze);
+document.getElementById('reset-btn').addEventListener('click', reset);
+document.getElementById('reset-btn-nf').addEventListener('click', reset);
+
+function setStep(id, state) {
+  const el = document.getElementById(id); if (!el) return;
+  el.className = 'step' + (state ? ' ' + (state==='error'?'error-step':state) : '');
+  const icon = el.querySelector('.step-icon');
+  if (icon) icon.textContent = state==='done'?'✓':state==='error'?'✗':state==='active'?'⏳':'';
+}
+function resetSteps() { ['step-read','step-parse','step-lookup','step-done'].forEach(id => setStep(id,'')); }
+function sleep(ms) { return new Promise(r => setTimeout(r,ms)); }
+
+function reset() {
+  currentFile = null; fileInput.value = '';
+  previewWrap.style.display = 'none'; dropZone.style.display = '';
+  analyzeBtn.style.display = 'none'; statusBox.style.display = 'none';
+  resultsDiv.style.display = 'none'; resultFound.style.display = 'none'; resultNF.style.display = 'none';
+  resetSteps();
+}
+
+// ── Analyze photo ──
+async function analyze() {
+  if (!currentFile) return;
+  analyzeBtn.disabled = true;
+  statusBox.style.display = 'block'; resultsDiv.style.display = 'none'; resetSteps();
+  setStep('step-read','active');
+
+  let text = '';
+  try { text = await ocrImage(currentFile); } catch(e) { setStep('step-read','error'); analyzeBtn.disabled = false; return; }
+  setStep('step-read','done'); setStep('step-parse','active'); await sleep(200);
+
+  let lookup = null;
+  let displayCode = '';
+
+  if (currentMode === 'eu') {
+    const codes = extractEUCodes(text);
+    if (!codes.length) { setStep('step-parse','error'); showNotFound(); analyzeBtn.disabled = false; return; }
+    setStep('step-parse','done'); setStep('step-lookup','active');
+    const c = codes[0];
+    lookup = await lookupEU(c.cc, c.num, c.sfx);
+    displayCode = c.code;
+  } else {
+    const codes = extractUSCodes(text);
+    if (!codes.length) { setStep('step-parse','error'); showNotFound(); analyzeBtn.disabled = false; return; }
+    setStep('step-parse','done'); setStep('step-lookup','active');
+    const c = codes[0];
+    lookup = await lookupUS(c.prefix, c.num);
+    displayCode = c.displayCode || c.code;
+  }
+
+  setStep('step-lookup','done'); setStep('step-done','active'); await sleep(250); setStep('step-done','done');
+  renderResult(lookup, displayCode);
+  analyzeBtn.disabled = false;
+}
+
+function showNotFound() {
+  setStep('step-lookup','error'); setStep('step-done','error');
+  resultsDiv.style.display = 'block'; resultNF.style.display = 'block'; resultFound.style.display = 'none';
+}
+
+// ── EU manual ──
+const euCC  = document.getElementById('eu-cc');
+const euNum = document.getElementById('eu-num');
+const euSfx = document.getElementById('eu-sfx');
+
+function validateEU() {
+  const cc=euCC.value.trim().toUpperCase(), num=euNum.value.trim(), sfx=euSfx.value.trim().toUpperCase();
+  const ccOk=cc.length===2 && !!EU_COUNTRIES[cc];
+  const numOk=num.length>=1 && /^\d+$/.test(num);
+  const sfxOk=VALID_EU_SUFFIXES.includes(sfx);
+  const all=ccOk && numOk && sfxOk;
+
+  euCC.className=cc.length?((ccOk)?'valid':'invalid'):'';
+  euNum.className=num.length?(numOk?'valid':'invalid'):'';
+  euSfx.className=sfx.length?(sfxOk?'valid':'invalid'):'';
+
+  document.getElementById('eu-preview').textContent=(cc||'?')+' · '+(num||'?')+' · '+(sfx||'?');
+  document.getElementById('eu-preview').className='code-preview'+(all?' ready':'');
+  document.getElementById('eu-country-hint').innerHTML = ccOk ? `🇪🇺 ${EU_COUNTRIES[cc].name} — ${EU_COUNTRIES[cc].authority}` : '';
+
+  const msg=document.getElementById('eu-val-msg');
+  msg.className='validation-msg';
+  if(all){msg.className+=' ok';msg.textContent='✓ Valid EU establishment code format';}
+  else if(!cc&&!num&&!sfx){msg.className+=' hint';msg.innerHTML='<span>Enter the three parts of the EU health mark oval</span>';}
+  else if(cc.length&&!ccOk){msg.className+=' err';msg.textContent=`✗ "${cc}" not recognised — check 2-letter country code`;}
+  else if(sfx.length&&!sfxOk){msg.className+=' err';msg.textContent=`✗ "${sfx}" not a standard EU suffix. Try: ${VALID_EU_SUFFIXES.join(', ')}`;}
+  else{msg.className+=' hint';msg.innerHTML='<span>Keep filling in all three fields</span>';}
+
+  document.getElementById('eu-lookup-btn').disabled=!all;
+}
+
+euCC.addEventListener('input',e=>{e.target.value=e.target.value.replace(/[^A-Za-z]/g,'');validateEU();if(e.target.value.length===2)euNum.focus();});
+euNum.addEventListener('input',e=>{e.target.value=e.target.value.replace(/[^0-9]/g,'');validateEU();if(e.target.value.length===4)euSfx.focus();});
+euSfx.addEventListener('input',e=>{e.target.value=e.target.value.replace(/[^A-Za-z]/g,'');validateEU();});
+euNum.addEventListener('keydown',e=>{if(e.key==='Backspace'&&!euNum.value)euCC.focus();});
+euSfx.addEventListener('keydown',e=>{if(e.key==='Backspace'&&!euSfx.value)euNum.focus();});
+
+document.getElementById('eu-lookup-btn').addEventListener('click', async () => {
+  const cc=euCC.value.trim().toUpperCase(), num=euNum.value.trim(), sfx=euSfx.value.trim().toUpperCase();
+  await runLookup(async () => { const l=await lookupEU(cc,num,sfx); renderResult(l, l.code); });
+});
+
+// ── US manual ──
+const usNum = document.getElementById('us-num');
+
+function validateUS() {
+  const num=usNum.value.trim(), prefix=document.getElementById('us-type').value;
+  const numOk=num.length>=1 && /^\d+$/.test(num);
+
+  usNum.className=num.length?(numOk?'valid':'invalid'):'';
+  const pData=US_PREFIXES[prefix]||{};
+  document.getElementById('us-preview').textContent = numOk ? `EST. ${num} (${pData.label||prefix})` : 'EST. ?';
+  document.getElementById('us-preview').className='code-preview'+(numOk?' ready':'');
+
+  const msg=document.getElementById('us-val-msg');
+  msg.className='validation-msg';
+  if(numOk){msg.className+=' ok';msg.textContent=`✓ ${pData.label||prefix} establishment #${num}`;}
+  else if(!num){msg.className+=' hint';msg.textContent='Enter the EST. number from the USDA stamp';}
+  else{msg.className+=' err';msg.textContent='✗ Number must contain only digits';}
+
+  document.getElementById('us-lookup-btn').disabled=!numOk;
+}
+
+usNum.addEventListener('input',e=>{e.target.value=e.target.value.replace(/[^0-9]/g,'');validateUS();});
+document.getElementById('us-type').addEventListener('change', validateUS);
+
+document.getElementById('us-lookup-btn').addEventListener('click', async () => {
+  const num=usNum.value.trim(), prefix=document.getElementById('us-type').value;
+  await runLookup(async () => { const l=await lookupUS(prefix,num); renderResult(l, l.displayCode||l.code); });
+});
+
+async function runLookup(fn) {
+  statusBox.style.display='block'; resultsDiv.style.display='none'; resetSteps();
+  setStep('step-read','done'); setStep('step-parse','done'); setStep('step-lookup','active');
+  await fn();
+  setStep('step-lookup','done'); setStep('step-done','active'); await sleep(250); setStep('step-done','done');
+}
+
+// ══════════════════════════════════════════════════════════
+//  RENDER
+// ══════════════════════════════════════════════════════════
+function renderResult(lookup, displayCode) {
+  document.getElementById('code-display').textContent = displayCode;
+  document.getElementById('code-sublabel').textContent = lookup.sublabel || '';
+
+  // Establishment name box
+  const nameWrap = document.getElementById('estab-name-wrap');
+  if (lookup.establishment_name) {
+    document.getElementById('estab-name').textContent = lookup.establishment_name;
+    document.getElementById('estab-address').textContent = lookup.address || '';
+    document.getElementById('estab-source').textContent = lookup.name_source ? `✓ Source: ${lookup.name_source}` : '';
+    nameWrap.style.display = 'block';
+  } else {
+    nameWrap.style.display = 'none';
+  }
+
+  // Info grid
+  let cells = [];
+  if (currentMode === 'eu') {
+    cells = [
+      {key:'Country', val: lookup.country_name},
+      {key:'Facility No.', val: lookup.code?.split(' ')[1] || '—'},
+      {key:'Suffix', val: lookup.suffix_meaning},
+      {key:'Facility Type', val: lookup.establishment_type},
+      {key:'National Authority', val: lookup.national_authority},
+      {key:'Regulation', val: lookup.regulation},
+    ];
+  } else {
+    cells = [
+      {key:'Establishment #', val: lookup.code},
+      {key:'Type', val: lookup.prefix_label || '—'},
+      {key:'Inspecting Authority', val: lookup.authority},
+      {key:'Regulation', val: lookup.regulation},
+      {key:'City / State', val: [lookup.city, lookup.state].filter(Boolean).join(', ') || '—'},
+      {key:'Activities', val: lookup.activities || '—', full: true},
+    ];
+  }
+  document.getElementById('info-grid').innerHTML = cells.map(c =>
+    `<div class="info-tile${c.full?' full':''}"><div class="tile-key">${c.key}</div><div class="tile-val">${c.val||'—'}</div></div>`
+  ).join('');
+
+  // Recalls (US only)
+  const recallWrap = document.getElementById('recall-wrap');
+  recallWrap.innerHTML = '';
+  if (lookup.recalls?.length) {
+    lookup.recalls.forEach(rc => {
+      const b = document.createElement('div');
+      b.className = 'recall-badge';
+      b.innerHTML = `⚠️ Recall ${rc.date ? rc.date.slice(0,10) : ''}: ${rc.reason} ${rc.classification ? '('+rc.classification+')' : ''}`;
+      recallWrap.appendChild(b);
+    });
+  }
+
+  // Analysis text
+  document.getElementById('analysis-text').textContent = lookup.summary || '';
+
+  // Note if name not found
+  const noteWrap = document.getElementById('info-note-wrap');
+  noteWrap.innerHTML = !lookup.establishment_name
+    ? `<div class="info-note">ℹ️ <span>The registered name was not found via API. Use the database link below to search by establishment number.</span></div>`
+    : '';
+
+  // External link
+  document.getElementById('ext-link').href = lookup.ext_url || '#';
+  document.getElementById('ext-link-label').textContent = lookup.ext_label || 'Search official database';
+
+  resultsDiv.style.display = 'block';
+  resultFound.style.display = 'block';
+  resultNF.style.display = 'none';
+}
+</script>
+</body>
+</html>
