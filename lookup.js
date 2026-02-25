@@ -16,7 +16,24 @@ export default async (req, context) => {
     let apiUrl = "";
 
     if (source === "fsis") {
-      apiUrl = `https://www.fsis.usda.gov/fsis/api/establishment/v/1?establishment_number=${prefix}${est}&$top=1`;
+      // Try multiple known FSIS API URL formats
+      const fsisUrls = [
+        `https://www.fsis.usda.gov/fsis/api/establishment/v/1?establishment_number=${prefix}${est}&$top=1`,
+        `https://www.fsis.usda.gov/fsis/api/establishment/v/1?EstablishmentNumber=${prefix}${est}&$top=1`,
+        `https://www.fsis.usda.gov/fsis/api/mpi/v/1?establishment_number=${prefix}${est}&$top=1`,
+      ];
+      for (const u of fsisUrls) {
+        try {
+          const r = await fetch(u, { headers: { "Accept": "application/json", "User-Agent": "FoodEstablishmentFinder/1.0" } });
+          const text = await r.text();
+          console.log(`FSIS ${u} → ${r.status}: ${text.slice(0, 300)}`);
+          if (r.ok && text.includes('{')) {
+            const data = JSON.parse(text);
+            return new Response(JSON.stringify({ found: true, data, url: u }), { headers });
+          }
+        } catch(e) { console.log(`FSIS error ${u}: ${e.message}`); }
+      }
+      return new Response(JSON.stringify({ found: false, tried: fsisUrls }), { headers });
     } else if (source === "fsis_recall") {
       apiUrl = `https://www.fsis.usda.gov/fsis/api/recall/v/1?establishment_id=${prefix}${est}&$top=3&$orderby=recall_date%20desc`;
     } else if (source === "fda") {
